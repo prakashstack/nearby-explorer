@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Share2, Heart, MapPin, Check } from 'lucide-react';
+import { getShareUrl } from '../services/shareUrl';
 
 export function Navbar({
   title,
@@ -22,7 +23,7 @@ export function Navbar({
           await navigator.share({
             title: 'Nearby Explorer',
             text: 'Discover hidden gems and venues near you with Apple iOS glass design!',
-            url: window.location.href,
+            url: getShareUrl(),
           });
           return;
         } catch (e) {
@@ -35,7 +36,7 @@ export function Navbar({
     const shareData = {
       title: place?.name || 'Nearby Explorer',
       text: `Check out ${place?.name || 'this venue'} on Nearby Explorer! ${place?.category ? `(${place.category})` : ''}`,
-      url: window.location.href,
+      url: getShareUrl(),
     };
 
     if (navigator.share) {
@@ -48,7 +49,7 @@ export function Navbar({
     }
 
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(getShareUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
@@ -62,14 +63,24 @@ export function Navbar({
         {/* Left Side: Back Chevron or App Brand */}
         <div className="flex items-center gap-3">
           {isDetail ? (
-            <button
-              onClick={() => navigate(-1)}
-              className="group flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors active:scale-95 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
-              aria-label="Back to Explore"
-            >
-              <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
-              <span className="text-sm font-semibold tracking-tight">Explore</span>
-            </button>
+            <>
+              <button
+                onClick={() => navigate('/')}
+                className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20 transition-transform active:scale-95"
+                aria-label="Go to Nearby Explorer home"
+                title="Nearby Explorer home"
+              >
+                <MapPin className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                className="group flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors active:scale-95 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
+                aria-label="Back to Explore"
+              >
+                <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+                <span className="text-sm font-semibold tracking-tight">Explore</span>
+              </button>
+            </>
           ) : (
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20">

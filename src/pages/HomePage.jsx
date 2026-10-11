@@ -25,6 +25,13 @@ import {
 } from '../services/geoapify';
 import { getGeoapifyKey, getGeminiKey, subscribeKeys } from '../services/apiKeys';
 
+const SEARCH_CATEGORY_ALIASES = {
+  'street food': ['food', 'fast food', 'restaurant', 'cafe', 'bakery', 'catering'],
+};
+
+const normalizeSearchText = (value = '') =>
+  String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
 export function HomePage({ favorites = [], onToggleFavorite }) {
   // Coordinates (default to user's location, fallback initially)
   const [coords, setCoords] = useState({ lat: 22.8841, lon: 72.6738 }); // Barejadi default coords
@@ -170,12 +177,21 @@ export function HomePage({ favorites = [], onToggleFavorite }) {
 
     // Filter by text search query
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = normalizeSearchText(searchQuery);
+      const categoryTerms = SEARCH_CATEGORY_ALIASES[q] || [];
       list = list.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(q) ||
-          p.category?.toLowerCase().includes(q) ||
-          p.address?.toLowerCase().includes(q)
+        (p) => {
+          const searchableText = normalizeSearchText([
+            p.name,
+            p.category,
+            p.categorySlug,
+            p.address,
+            ...(p.rawCategories || []),
+          ].join(' '));
+          return searchableText.includes(q) || categoryTerms.some((term) =>
+            searchableText.includes(normalizeSearchText(term))
+          );
+        }
       );
     }
 
@@ -191,6 +207,7 @@ export function HomePage({ favorites = [], onToggleFavorite }) {
   const hasKeys = Boolean(keys.geoapifyKey && keys.geminiKey);
   const activeCategoryObj = dynamicCategories.find((c) => c.id === selectedCategory);
   const villageName = locationInfo.village || locationInfo.displayName || cityName;
+  const hasSearchQuery = Boolean(searchQuery.trim());
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-16 selection:bg-blue-600/40">
@@ -409,18 +426,35 @@ export function HomePage({ favorites = [], onToggleFavorite }) {
                 <Compass className="w-6 h-6" />
               </div>
               <h3 className="text-base font-semibold text-white">
-                {selectedCategory !== 'all'
+                {hasSearchQuery
+                  ? `No places match "${searchQuery.trim()}"`
+                  : selectedCategory !== 'all'
                   ? `No venues in category "${activeCategoryObj?.label || selectedCategory}"`
                   : `No places found within ${radiusKm} km of ${villageName}`}
               </h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                {selectedCategory !== 'all'
+                {hasSearchQuery
+                  ? places.length > 0
+                    ? `${places.length} places are available in this area, but none match your search.`
+                    : `No places are currently available within ${radiusKm} km of ${villageName}.`
+                  : selectedCategory !== 'all'
                   ? 'Switch back to "All" to view all available places or widen your search radius.'
                   : showOnlyFavorites
                   ? "You haven't saved any favorites yet. Tap the heart on any place card to add it."
                   : 'Try expanding your radius to 30 km or 50 km to discover more surrounding venues.'}
               </p>
-              {selectedCategory !== 'all' ? (
+              {hasSearchQuery ? (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                    setShowOnlyFavorites(false);
+                  }}
+                  className="mt-4 px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold"
+                >
+                  View All Places ({places.length})
+                </button>
+              ) : selectedCategory !== 'all' ? (
                 <button
                   onClick={() => setSelectedCategory('all')}
                   className="mt-4 px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold"

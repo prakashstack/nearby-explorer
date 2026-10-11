@@ -21,6 +21,7 @@ import { AiLocalInsight } from '../components/AiLocalInsight';
 import { SuggestedPlaces } from '../components/SuggestedPlaces';
 import { fetchPlaceDetails, fetchNearbyPlaces } from '../services/geoapify';
 import { getGeoapifyKey } from '../services/apiKeys';
+import { getShareUrl } from '../services/shareUrl';
 
 export function PlaceDetailPage({ favorites = [], onToggleFavorite, userCoords }) {
   const { placeId } = useParams();
@@ -125,7 +126,7 @@ export function PlaceDetailPage({ favorites = [], onToggleFavorite, userCoords }
     const shareData = {
       title: place?.name || 'Nearby Venue',
       text: `Check out ${place?.name || 'this venue'} on Nearby Explorer!`,
-      url: window.location.href,
+      url: getShareUrl(),
     };
 
     if (navigator.share) {
@@ -138,7 +139,7 @@ export function PlaceDetailPage({ favorites = [], onToggleFavorite, userCoords }
     }
 
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(getShareUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
