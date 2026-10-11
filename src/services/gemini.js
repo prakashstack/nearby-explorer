@@ -157,8 +157,24 @@ function generateOfflineInsight(place) {
 /**
  * Generate AI Insider Suggestions & Search Tags for the current location/village
  */
-export async function fetchLocationAiSuggestions({ locationName, fullAddress, apiKey }) {
-  const cacheKey = `cache_location_ai_${(locationName || 'local').toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+export async function fetchLocationAiSuggestions({
+  locationName,
+  fullAddress,
+  nearbyPlaces = [],
+  radiusKm = 20,
+  apiKey,
+}) {
+  const placeContext = nearbyPlaces
+    .map(({ name, category, distanceKm }) =>
+      `${name || 'Unnamed place'} (${category || 'Uncategorized'}${Number.isFinite(distanceKm) ? `, ${distanceKm} km` : ''})`
+    )
+    .join('; ');
+  const contextKey = `${locationName}|${fullAddress}|${radiusKm}|${placeContext}`;
+  const contextHash = Array.from(contextKey).reduce(
+    (hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0,
+    0
+  ).toString(36);
+  const cacheKey = `cache_location_ai_v2_${contextHash}`;
 
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
@@ -169,24 +185,31 @@ export async function fetchLocationAiSuggestions({ locationName, fullAddress, ap
     }
   }
 
+  const fallback = generateLocationIntroduction({
+    locationName,
+    fullAddress,
+    nearbyPlaces,
+    radiusKm,
+  });
+
   // Fallback if no apiKey
   if (!apiKey || apiKey.trim().length === 0) {
-    const fallback = {
-      insight: `Welcome to ${locationName || 'your area'}! Discover popular local chai corners, authentic neighborhood eateries, historic community landmarks, and everyday shopping within your 20 km radius.`,
-      tags: ['Chai & Snacks', 'Local Temples', 'Daily Essentials', 'Street Food', 'Markets'],
-    };
     localStorage.setItem(cacheKey, JSON.stringify(fallback));
     return fallback;
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-    const prompt = `You are an authentic iOS local neighborhood insider. For the location "${locationName || 'Local Village'}" with full address: "${fullAddress || 'nearby'}", provide:
-1. A concise, engaging 2-sentence visitor guide on what makes this area authentic and what highlights to look for within 20 km.
-2. An array of 4 to 5 short 2-word exploration keywords (e.g., "Chai & Snacks", "Local Temples", "Street Food", "Fresh Markets", "Scenic Spots").
-Return STRICT JSON ONLY without markdown fences: {"insight": "...", "tags": ["tag1", "tag2", "tag3", "tag4"]}`;
+    const prompt = `Write a welcoming introduction to the visitor's current area and nearby highlights.
+Location: ${locationName || 'Current location'}
+Address: ${fullAddress || 'Not provided'}
+Discovery radius: ${radiusKm} km
+Nearby place listings from the map data: ${placeContext || 'No nearby place listings are available yet.'}
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+Describe the area's character and mention real nearby places or local foods only when supported by the provided place listings or facts you know with high confidence. Do not invent attractions, restaurants, dishes, popularity, history, or travel times. If no specific landmark or food is reliably known, describe what the supplied nearby listings offer without calling them famous. Write 2 or 3 concise paragraphs, no bullets or numbering. Also suggest 4 or 5 short search tags based on the nearby listings.
+Return STRICT JSON ONLY without markdown fences: {"insight": "2 or 3 paragraphs", "tags": ["tag1", "tag2", "tag3", "tag4"]}`;
+
+    const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
     let text = '';
 
     for (const modelName of candidateModels) {
@@ -214,10 +237,24 @@ Return STRICT JSON ONLY without markdown fences: {"insight": "...", "tags": ["ta
     console.warn('[Gemini] Location suggestions error:', err);
   }
 
-  const fallback = {
-    insight: `Welcome to ${locationName || 'your area'}! Discover popular local chai corners, authentic neighborhood eateries, historic community landmarks, and everyday shopping within your 20 km radius.`,
-    tags: ['Chai & Snacks', 'Local Temples', 'Daily Essentials', 'Street Food', 'Markets'],
-  };
   localStorage.setItem(cacheKey, JSON.stringify(fallback));
   return fallback;
+}
+
+function generateLocationIntroduction({ locationName, fullAddress, nearbyPlaces, radiusKm }) {
+  const location = locationName || 'your current location';
+  const examples = nearbyPlaces
+    .slice(0, 4)
+    .map(({ name, category }) => `${name}${category ? ` (${category})` : ''}`);
+  const tags = [...new Set(nearbyPlaces.map(({ category }) => category).filter(Boolean))]
+    .slice(0, 5);
+
+  const insight = examples.length
+    ? `Welcome to ${location}. Within ${radiusKm} km of ${fullAddress || location}, nearby listings include ${examples.join(', ')}. These places give you a starting point for exploring local food, services, and points of interest.`
+    : `Welcome to ${location}. Use ${fullAddress || 'your current location'} as a starting point to explore within ${radiusKm} km. Nearby place details are not available yet, so check the map as local listings load.`;
+
+  return {
+    insight,
+    tags: tags.length ? tags : ['Restaurants', 'Local shops', 'Landmarks', 'Parks'],
+  };
 }

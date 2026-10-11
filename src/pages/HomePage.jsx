@@ -240,6 +240,8 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
           locationInfo={locationInfo}
           coords={coords}
           radiusKm={radiusKm}
+          nearbyPlaces={places}
+          placesLoading={loading}
           onSelectSuggestionTag={(tag) => setSearchQuery(tag)}
           onRefreshGps={requestGeolocation}
           locating={locating}

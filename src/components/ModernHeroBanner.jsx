@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   MapPin,
   Sparkles,
@@ -17,6 +17,8 @@ export function ModernHeroBanner({
   locationInfo = {},
   coords = {},
   radiusKm = 20,
+  nearbyPlaces = [],
+  placesLoading = false,
   onSelectSuggestionTag,
   onRefreshGps,
   locating = false,
@@ -28,11 +30,26 @@ export function ModernHeroBanner({
   const village = locationInfo.village || locationInfo.displayName || 'Current Location';
   const fullAddress = locationInfo.formattedAddress || 'Detecting address...';
   const pincode = locationInfo.postcode;
+  const nearbyPlaceContext = useMemo(
+    () =>
+      nearbyPlaces
+        .slice()
+        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+        .slice(0, 12)
+        .map(({ name, category, distanceKm }) => ({ name, category, distanceKm })),
+    [nearbyPlaces]
+  );
+  const nearbyPlaceContextKey = JSON.stringify(nearbyPlaceContext);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadAi() {
+      if (placesLoading) {
+        setLoadingAi(true);
+        return;
+      }
+
       if (!village || village === 'Current Location') {
         setLoadingAi(false);
         return;
@@ -43,6 +60,8 @@ export function ModernHeroBanner({
         const res = await fetchLocationAiSuggestions({
           locationName: village,
           fullAddress,
+          nearbyPlaces: nearbyPlaceContext,
+          radiusKm,
           apiKey,
         });
 
@@ -60,7 +79,7 @@ export function ModernHeroBanner({
     return () => {
       isMounted = false;
     };
-  }, [village, fullAddress, apiKey]);
+  }, [village, fullAddress, nearbyPlaceContext, nearbyPlaceContextKey, radiusKm, placesLoading, apiKey]);
 
   return (
     <section className="relative rounded-3xl p-5 sm:p-7 bg-white/10 dark:bg-white/5 backdrop-blur-2xl border border-white/20 shadow-2xl overflow-hidden text-white transition-all">
@@ -144,7 +163,7 @@ export function ModernHeroBanner({
           </div>
         </div>
 
-        {/* AI Local Insights & Suggestions (Gemini 3.8 Flash) */}
+        {/* Current location introduction and nearby highlights */}
         <div className="apple-intelligence-glow p-4 rounded-2xl bg-slate-900/40 border border-white/15 backdrop-blur-xl relative overflow-hidden">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
@@ -154,9 +173,9 @@ export function ModernHeroBanner({
                 </div>
               </div>
               <h3 className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5">
-                AI Neighborhood Suggestions
+                About {village}
                 <span className="text-[9px] uppercase font-semibold px-2 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Gemini 3.8 Flash
+                  Gemini 2.5 Flash
                 </span>
               </h3>
             </div>
@@ -169,8 +188,8 @@ export function ModernHeroBanner({
             </div>
           ) : (
             <div className="space-y-2.5">
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic">
-                "{aiData?.insight || `Exploring ${village}: Discover authentic local flavors, daily essentials, and popular stops in this 20 km zone.`}"
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                {aiData?.insight || `Explore ${village} and its surroundings within ${radiusKm} km. Local highlights are being prepared from nearby places.`}
               </p>
 
               {/* Interactive AI Suggestion Tags */}
