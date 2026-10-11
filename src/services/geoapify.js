@@ -453,7 +453,17 @@ export async function fetchPlaceDetails({ placeId, apiKey }) {
 export async function fetchWalkingRoute({ fromLat, fromLon, toLat, toLon, apiKey }) {
   const cacheKey = `cache_route_${fromLat.toFixed(4)}_${fromLon.toFixed(4)}_${toLat.toFixed(4)}_${toLon.toFixed(4)}`;
   const cached = getCache(cacheKey);
-  if (cached) {
+  const cachedCoordinates = cached?.coordinates;
+  if (
+    Array.isArray(cachedCoordinates) &&
+    cachedCoordinates.length > 1 &&
+    cachedCoordinates.every(
+      (coordinate) =>
+        Array.isArray(coordinate) &&
+        Number.isFinite(coordinate[0]) &&
+        Number.isFinite(coordinate[1])
+    )
+  ) {
     return { route: cached, fromCache: true };
   }
 
@@ -493,8 +503,26 @@ export async function fetchWalkingRoute({ fromLat, fromLon, toLat, toLon, apiKey
     const feature = data.features?.[0];
     if (!feature) throw new Error('No route found');
 
-    const rawCoords = feature.geometry?.coordinates || [];
-    const leafletCoords = rawCoords.map((c) => [c[1], c[0]]);
+    const rawCoords = feature.geometry?.coordinates;
+    const coordinateLines =
+      feature.geometry?.type === 'MultiLineString' ? rawCoords : [rawCoords];
+    const leafletCoords = (coordinateLines || [])
+      .filter(Array.isArray)
+      .flatMap((line) =>
+        line
+          .filter(
+            (coordinate) =>
+              Array.isArray(coordinate) &&
+              Number.isFinite(Number(coordinate[0])) &&
+              Number.isFinite(Number(coordinate[1])) &&
+              Math.abs(Number(coordinate[0])) <= 180 &&
+              Math.abs(Number(coordinate[1])) <= 90
+          )
+          .map((coordinate) => [Number(coordinate[1]), Number(coordinate[0])])
+      );
+    if (leafletCoords.length < 2) {
+      throw new Error('Walking route did not include usable path coordinates');
+    }
     const distanceMeters = feature.properties?.distance || 1000;
     const timeSeconds = feature.properties?.time || 720;
 
@@ -517,10 +545,13 @@ export async function fetchWalkingRoute({ fromLat, fromLon, toLat, toLon, apiKey
         fromLon + (toLon - fromLon) * ratio,
       ]);
     }
+    const dLat = (toLat - fromLat) * 111;
+    const dLon = (toLon - fromLon) * 111 * Math.cos((fromLat * Math.PI) / 180);
+    const distanceMeters = Math.round(Math.sqrt(dLat * dLat + dLon * dLon) * 1000);
     const result = {
       coordinates: coords,
-      distanceMeters: 850,
-      durationMinutes: 11,
+      distanceMeters,
+      durationMinutes: Math.max(1, Math.round(distanceMeters / 1.4 / 60)),
     };
     setCache(cacheKey, result);
     return { route: result, fromCache: false, isDemo: true };

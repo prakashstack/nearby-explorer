@@ -51,7 +51,7 @@ function createCategoryIcon(category = '', apiKey = '') {
 function MapBoundsUpdater({ bounds }) {
   const map = useMap();
   useEffect(() => {
-    if (bounds && bounds.length > 1) {
+    if (bounds?.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
   }, [bounds, map]);
@@ -59,7 +59,7 @@ function MapBoundsUpdater({ bounds }) {
 }
 
 export function MapView({ place, userCoords }) {
-  const [walkingRoute, setWalkingRoute] = useState(null);
+  const [walkingRouteData, setWalkingRouteData] = useState(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [routeError, setRouteError] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
@@ -67,10 +67,17 @@ export function MapView({ place, userCoords }) {
   const apiKey = getGeoapifyKey();
   const tileUrl = getTileUrl(apiKey);
 
-  const placeLat = Number(place.lat) || 37.7749;
-  const placeLon = Number(place.lon) || -122.4194;
-  const userLat = Number(userCoords?.lat) || placeLat - 0.005;
-  const userLon = Number(userCoords?.lon) || placeLon - 0.005;
+  const parsedPlaceLat = Number(place.lat);
+  const parsedPlaceLon = Number(place.lon);
+  const placeLat = Number.isFinite(parsedPlaceLat) ? parsedPlaceLat : 37.7749;
+  const placeLon = Number.isFinite(parsedPlaceLon) ? parsedPlaceLon : -122.4194;
+  const parsedUserLat = Number(userCoords?.lat);
+  const parsedUserLon = Number(userCoords?.lon);
+  const userLat = Number.isFinite(parsedUserLat) ? parsedUserLat : placeLat - 0.005;
+  const userLon = Number.isFinite(parsedUserLon) ? parsedUserLon : placeLon - 0.005;
+  const routeKey = `${userLat},${userLon},${placeLat},${placeLon}`;
+  const walkingRoute = walkingRouteData?.key === routeKey ? walkingRouteData.route : null;
+  const isRouteVisible = showRoute && Boolean(walkingRoute);
 
   const venueIcon = createCategoryIcon(place.category, apiKey);
 
@@ -92,7 +99,7 @@ export function MapView({ place, userCoords }) {
         apiKey,
       });
 
-      setWalkingRoute(route);
+      setWalkingRouteData({ key: routeKey, route });
       setShowRoute(true);
     } catch (err) {
       console.error('Walking route error:', err);
@@ -102,11 +109,8 @@ export function MapView({ place, userCoords }) {
     }
   };
 
-  const mapBounds = showRoute && walkingRoute
-    ? [
-        [userLat, userLon],
-        [placeLat, placeLon],
-      ]
+  const mapBounds = isRouteVisible && walkingRoute?.coordinates?.length > 1
+    ? L.latLngBounds(walkingRoute.coordinates)
     : null;
 
   return (
@@ -139,17 +143,29 @@ export function MapView({ place, userCoords }) {
         </Marker>
 
         {/* Route Polyline */}
-        {showRoute && walkingRoute?.coordinates && (
-          <Polyline
-            positions={walkingRoute.coordinates}
-            pathOptions={{
-              color: '#007AFF',
-              weight: 5,
-              opacity: 0.9,
-              dashArray: '8, 8',
-              lineCap: 'round',
-            }}
-          />
+        {isRouteVisible && walkingRoute?.coordinates?.length > 1 && (
+          <>
+            <Polyline
+              positions={walkingRoute.coordinates}
+              pathOptions={{
+                color: '#ffffff',
+                weight: 10,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+            <Polyline
+              positions={walkingRoute.coordinates}
+              pathOptions={{
+                color: '#007AFF',
+                weight: 6,
+                opacity: 1,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+          </>
         )}
 
         {mapBounds && <MapBoundsUpdater bounds={mapBounds} />}
@@ -163,7 +179,7 @@ export function MapView({ place, userCoords }) {
           </div>
           <div>
             <div className="text-xs font-semibold text-white">Walking Route</div>
-            {showRoute && walkingRoute ? (
+            {isRouteVisible && walkingRoute ? (
               <div className="text-[11px] text-blue-300 font-medium">
                 {walkingRoute.distanceMeters >= 1000
                   ? `${(walkingRoute.distanceMeters / 1000).toFixed(1)} km`
@@ -180,7 +196,7 @@ export function MapView({ place, userCoords }) {
           onClick={handleFetchRoute}
           disabled={loadingRoute}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition-all active:scale-95 cursor-pointer ${
-            showRoute
+            isRouteVisible
               ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
               : 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
           }`}
@@ -190,7 +206,7 @@ export function MapView({ place, userCoords }) {
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               <span>Routing...</span>
             </>
-          ) : showRoute ? (
+          ) : isRouteVisible ? (
             <>
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Hide Route</span>

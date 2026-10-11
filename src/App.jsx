@@ -14,8 +14,8 @@ export default function App() {
     }
   });
 
-  // User coordinates shared state
-  const [userCoords, setUserCoords] = useState({ lat: 37.7749, lon: -122.4194 });
+  // Share the home page's current location with the place detail route.
+  const [userCoords, setUserCoords] = useState({ lat: 22.8841, lon: 72.6738 });
 
   useEffect(() => {
     try {
@@ -45,6 +45,7 @@ export default function App() {
             <HomePage
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}
+              onUserCoordsChange={setUserCoords}
             />
           }
         />

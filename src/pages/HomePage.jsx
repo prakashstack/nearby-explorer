@@ -32,7 +32,7 @@ const SEARCH_CATEGORY_ALIASES = {
 const normalizeSearchText = (value = '') =>
   String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-export function HomePage({ favorites = [], onToggleFavorite }) {
+export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange }) {
   // Coordinates (default to user's location, fallback initially)
   const [coords, setCoords] = useState({ lat: 22.8841, lon: 72.6738 }); // Barejadi default coords
   const [cityName, setCityName] = useState('Barejadi');
@@ -94,6 +94,7 @@ export function HomePage({ favorites = [], onToggleFavorite }) {
           lon: pos.coords.longitude,
         };
         setCoords(newCoords);
+        onUserCoordsChange?.(newCoords);
         setLocating(false);
 
         // Reverse geocode to find exact village, pincode, full address
