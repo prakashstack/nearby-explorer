@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Share2, Heart, Sliders, MapPin, Sparkles, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, Share2, Heart, MapPin, Check } from 'lucide-react';
 
 export function Navbar({
   title,
@@ -8,14 +8,11 @@ export function Navbar({
   isDetail = false,
   isFavorite = false,
   onToggleFavorite,
-  onOpenSettings,
   place = null,
   cityName = '',
   villageName = '',
-  hasKeysConfigured = false,
 }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
@@ -103,7 +100,7 @@ export function Navbar({
 
         {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-2">
-          {isDetail ? (
+          {isDetail && (
             <>
               {/* Favorite Button */}
               <button
@@ -129,21 +126,6 @@ export function Navbar({
                 aria-label="Share place"
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
-              </button>
-            </>
-          ) : (
-            <>
-              {/* Settings / API Keys Button */}
-              <button
-                onClick={onOpenSettings}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-medium text-white/90 transition-all active:scale-95"
-                title="Configure API Keys & Radius"
-              >
-                <Sliders className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden sm:inline">Settings</span>
-                {!hasKeysConfigured && (
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                )}
               </button>
             </>
           )}
