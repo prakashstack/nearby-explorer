@@ -1,0 +1,84 @@
+# =========================
+# Logs
+# =========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Dependencies
+# =========================
+node_modules/
+.pnp
+.pnp.js
+
+# =========================
+# Build & Output Artifacts
+# =========================
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.turbo/
+.cache/
+*.tsbuildinfo
+
+# =========================
+# Environment Variables & Configs
+# =========================
+.env
+.env.*
+!.env.example
+!.env.template
+*.local
+
+# =========================
+# Credentials, Secrets & Keys
+# =========================
+# Private keys & certificates
+*.pem
+*.key
+*.pub
+*.crt
+*.cert
+*.pfx
+*.p12
+
+# Cloud / Service provider credentials
+*credentials*.json
+*credentials*.yaml
+*credentials*.yml
+id_rsa
+id_ecdsa
+id_ed25519
+.aws/
+gcloud/
+service-account*.json
+firebase-adminsdk*.json
+
+# Keystores & token storage
+*.keystore
+*.jks
+token.json
+.auth/
+
+# =========================
+# Editor & OS Files
+# =========================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
