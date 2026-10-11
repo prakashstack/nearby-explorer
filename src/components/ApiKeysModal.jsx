@@ -123,7 +123,7 @@ export function ApiKeysModal({ isOpen, onClose }) {
               className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs font-mono text-white placeholder-slate-500"
             />
             <p className="text-[11px] text-slate-400 mt-1">
-              Powers client-side Google Gen AI SDK with <code className="text-purple-300">gemini-3.8-flash</code>.
+              Powers client-side Google Gen AI SDK with <code className="text-purple-300">gemini-2.5-flash</code>.
             </p>
           </div>
 

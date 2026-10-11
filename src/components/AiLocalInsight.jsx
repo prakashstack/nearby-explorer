@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Bot, ShieldCheck } from 'lucide-react';
+import { Sparkles, RefreshCw, ShieldCheck } from 'lucide-react';
 import { fetchLocalInsight } from '../services/gemini';
 import { getGeminiKey } from '../services/apiKeys';
 
@@ -7,8 +7,7 @@ export function AiLocalInsight({ place }) {
   const [insight, setInsight] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fromCache, setFromCache] = useState(false);
-  const [isDemo, setIsDemo] = useState(false);
-  const [modelName, setModelName] = useState('Gemini 3.8 Flash');
+  const [modelName, setModelName] = useState('Gemini 2.5 Flash');
   const [error, setError] = useState(null);
 
   const apiKey = getGeminiKey();
@@ -17,7 +16,7 @@ export function AiLocalInsight({ place }) {
     if (!place?.id) return;
 
     if (forceRefresh) {
-      localStorage.removeItem(`cache_gemini_${place.id}`);
+      localStorage.removeItem(`cache_gemini_guide_v3_${place.id}`);
     }
 
     setLoading(true);
@@ -31,7 +30,6 @@ export function AiLocalInsight({ place }) {
 
       setInsight(res.text);
       setFromCache(res.fromCache);
-      setIsDemo(Boolean(res.isDemo));
       if (res.model) {
         setModelName(res.model.replace('(demo)', '').replace('(fallback)', '').trim());
       }
@@ -106,16 +104,12 @@ export function AiLocalInsight({ place }) {
         ) : error ? (
           <p className="text-xs text-rose-300">{error}</p>
         ) : (
-          <div>
-            <p className="text-sm sm:text-base font-normal text-slate-100 leading-relaxed tracking-normal italic selection:bg-purple-500/40">
-              "{insight}"
-            </p>
-            {isDemo && (
-              <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1 font-mono">
-                <Bot className="w-3 h-3 text-purple-400" />
-                Insider preview • Connect VITE_GEMINI_API_KEY for custom live generation
-              </p>
-            )}
+          <div className="space-y-3 text-sm sm:text-base font-normal text-slate-100 leading-relaxed tracking-normal selection:bg-purple-500/40">
+            {(insight || '')
+              .split(/\n\s*\n/)
+              .map((paragraph) => paragraph.replace(/^\s*(?:[-*•]|\d+[.)])\s*/gm, '').trim())
+              .filter(Boolean)
+              .map((paragraph, index) => <p key={`${index}-${paragraph}`}>{paragraph}</p>)}
           </div>
         )}
       </div>
