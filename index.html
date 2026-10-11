@@ -6,11 +6,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#030712" />
-    <title>Nearby Explorer • iOS Glass</title>
+    <title>Nearby Explorer</title>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V436J7NNP7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-V436J7NNP7");
+    </script>
   </head>
   <body class="bg-slate-950 text-white min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-
