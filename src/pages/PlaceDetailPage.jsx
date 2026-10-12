@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Navigation,
@@ -19,91 +19,31 @@ import { MapView } from '../components/MapView';
 import { IconCardGrid } from '../components/IconCardGrid';
 import { AiLocalInsight } from '../components/AiLocalInsight';
 import { SuggestedPlaces } from '../components/SuggestedPlaces';
-import { fetchPlaceDetails, fetchNearbyPlaces } from '../services/geoapify';
-import { getGeoapifyKey } from '../services/apiKeys';
+import { getCachedPlaceDetails, getCachedPlaces } from '../services/geoapify';
 import { getShareUrl } from '../services/shareUrl';
 
 export function PlaceDetailPage({ favorites = [], onToggleFavorite, userCoords }) {
   const { placeId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const routePlace = location.state?.place?.id === placeId ? location.state.place : null;
+  // The home listing already contains the detail data. A reload resolves it from its cache.
+  const place = routePlace || getCachedPlaceDetails(placeId);
 
-  const [place, setPlace] = useState(location.state?.place || null);
-  const [loading, setLoading] = useState(!location.state?.place);
-  const [error, setError] = useState(null);
-  const [nearbySuggestions, setNearbySuggestions] = useState([]);
   const [copied, setCopied] = useState(false);
 
-  const apiKey = getGeoapifyKey();
   const isFavorite = favorites.some((f) => f.id === (place?.id || placeId));
 
-  // Fetch venue details if not in location.state or to enrich details
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadDetails() {
-      if (!placeId) return;
-
-      // If already provided via router state and matches current ID
-      if (location.state?.place && location.state.place.id === placeId) {
-        setPlace(location.state.place);
-        setLoading(false);
-      } else {
-        setLoading(true);
-      }
-
-      try {
-        const { place: fetchedPlace } = await fetchPlaceDetails({
-          placeId,
-          apiKey,
-        });
-
-        if (isMounted) {
-          setPlace((prev) => ({ ...(prev || {}), ...fetchedPlace }));
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Failed to load place details:', err);
-        if (isMounted && !place) {
-          setError('Could not load place details.');
-          setLoading(false);
-        }
-      }
-    }
-
-    loadDetails();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [placeId, apiKey]);
-
-  // Load similar places for "You Might Also Like"
-  useEffect(() => {
-    async function loadSimilar() {
-      if (!place?.lat || !place?.lon) return;
-
-      try {
-        const { places } = await fetchNearbyPlaces({
-          lat: place.lat,
-          lon: place.lon,
-          radiusKm: 6,
-          apiKey,
-        });
-        // Filter similar category in memory from cached API response
-        const sameCategory = places.filter(
-          (p) => p.id !== place.id && (p.categorySlug === place.categorySlug || p.category === place.category)
-        );
-        setNearbySuggestions(sameCategory.length > 0 ? sameCategory : places.filter((p) => p.id !== place.id));
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    if (place) {
-      loadSimilar();
-    }
-  }, [place?.id, place?.lat, place?.lon, place?.categorySlug, apiKey]);
+  // Derive similar places from the existing home listing; do not make a second request.
+  const nearbySuggestions = useMemo(() => {
+    if (!place) return [];
+    const listingPlaces = getCachedPlaces();
+    const otherPlaces = listingPlaces.filter((item) => item.id !== place.id);
+    const sameCategory = otherPlaces.filter(
+      (item) => item.categorySlug === place.categorySlug || item.category === place.category
+    );
+    return sameCategory.length > 0 ? sameCategory : otherPlaces;
+  }, [place?.id, place?.categorySlug, place?.category]);
 
   // Quick Actions Handlers
   const handleDirections = () => {
@@ -147,23 +87,7 @@ export function PlaceDetailPage({ favorites = [], onToggleFavorite, userCoords }
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-        <Navbar isDetail title="Loading venue..." />
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="space-y-4 max-w-md w-full">
-            <div className="h-64 rounded-3xl bg-white/5 animate-shimmer" />
-            <div className="h-8 rounded-xl bg-white/10 w-2/3 animate-shimmer" />
-            <div className="h-4 rounded-lg bg-white/5 w-1/2 animate-shimmer" />
-            <div className="h-32 rounded-2xl bg-white/5 animate-shimmer" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !place) {
+  if (!place) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col">
         <Navbar isDetail title="Venue" />

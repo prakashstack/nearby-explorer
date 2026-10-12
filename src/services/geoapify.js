@@ -387,6 +387,51 @@ export async function fetchNearbyPlaces({ lat, lon, radiusKm = 5, apiKey }) {
 }
 
 /**
+ * Read the already-fetched home-listing data without making another API request.
+ */
+export function getCachedPlaceDetails(placeId) {
+  if (!placeId) return null;
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith('cache_places_')) continue;
+
+      const places = getCache(key);
+      const place = Array.isArray(places) ? places.find((item) => item.id === placeId) : null;
+      if (place) return place;
+    }
+  } catch (error) {
+    console.warn('[Geoapify] Could not read cached home-listing data:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Read all currently cached home-listing places without making an API request.
+ */
+export function getCachedPlaces() {
+  const placesById = new Map();
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith('cache_places_')) continue;
+
+      const places = getCache(key);
+      if (Array.isArray(places)) {
+        places.forEach((place) => placesById.set(place.id, place));
+      }
+    }
+  } catch (error) {
+    console.warn('[Geoapify] Could not read cached home-listing places:', error);
+  }
+
+  return [...placesById.values()];
+}
+
+/**
  * Fetch Place Details by ID with 30-min TTL
  */
 export async function fetchPlaceDetails({ placeId, apiKey }) {
