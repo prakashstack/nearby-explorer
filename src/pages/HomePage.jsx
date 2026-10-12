@@ -270,7 +270,7 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
           </div>
 
           {/* Bottom row: Kilometer Radius Capsule (Default 20km) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-white/10">
+          <div className="flex flex-col gap-2.5 pt-1 border-t border-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                 <Compass className="w-3.5 h-3.5 text-blue-400" />
@@ -290,29 +290,30 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
                 <span className="text-xs text-slate-300 font-medium pr-1">km</span>
               </div>
 
-              {/* Quick radius presets with 20k default */}
-              <div className="flex items-center gap-1">
-                {[5, 10, 20, 30, 50].map((km) => (
-                  <button
-                    key={km}
-                    onClick={() => setRadiusKm(km)}
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
-                      radiusKm === km
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
-                    }`}
-                  >
-                    {km}k
-                  </button>
-                ))}
-              </div>
+            </div>
+
+            {/* Keep every preset visible on narrow screens instead of overflowing. */}
+            <div className="grid w-full grid-cols-5 gap-1 sm:flex sm:w-auto sm:items-center">
+              {[5, 10, 20, 30, 50].map((km) => (
+                <button
+                  key={km}
+                  onClick={() => setRadiusKm(km)}
+                  className={`w-full rounded-full px-1.5 py-1 text-[11px] font-medium transition-all sm:w-auto sm:px-2 sm:py-0.5 ${
+                    radiusKm === km
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  {km} km
+                </button>
+              ))}
             </div>
 
             {/* iOS System Blue Search Button */}
             <button
               onClick={loadPlaces}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              className="flex self-start items-center gap-2 px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50 sm:self-auto"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Search Radius</span>
