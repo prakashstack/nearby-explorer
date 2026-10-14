@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Sparkles,
@@ -6,80 +6,70 @@ import {
   Compass,
   CheckCircle2,
   Tag,
-  ArrowRight,
-  ShieldCheck,
-  RefreshCw,
 } from 'lucide-react';
-import { fetchLocationAiSuggestions } from '../services/gemini';
-import { getGeminiKey } from '../services/apiKeys';
+import { getPlaceHomepageDetails } from '../services/homepageDetails';
 
 export function ModernHeroBanner({
   locationInfo = {},
   coords = {},
   radiusKm = 20,
-  nearbyPlaces = [],
-  placesLoading = false,
+  reverseGeocodeResponse,
+  reverseGeocodeLoading = false,
   onSelectSuggestionTag,
   onRefreshGps,
   locating = false,
 }) {
-  const [aiData, setAiData] = useState(null);
+  const [homepageDetails, setHomepageDetails] = useState(null);
   const [loadingAi, setLoadingAi] = useState(true);
-
-  const apiKey = getGeminiKey();
+  const [detailsError, setDetailsError] = useState(null);
   const village = locationInfo.village || locationInfo.displayName || 'Current Location';
   const fullAddress = locationInfo.formattedAddress || 'Detecting address...';
   const pincode = locationInfo.postcode;
-  const nearbyPlaceContext = useMemo(
-    () =>
-      nearbyPlaces
-        .slice()
-        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
-        .slice(0, 12)
-        .map(({ name, category, distanceKm }) => ({ name, category, distanceKm })),
-    [nearbyPlaces]
-  );
-  const nearbyPlaceContextKey = JSON.stringify(nearbyPlaceContext);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadAi() {
-      if (placesLoading) {
+    async function loadHomepageDetails() {
+      if (reverseGeocodeLoading) {
+        setHomepageDetails(null);
+        setDetailsError(null);
         setLoadingAi(true);
         return;
       }
 
-      if (!village || village === 'Current Location') {
+      if (!reverseGeocodeResponse) {
+        setHomepageDetails(null);
+        setDetailsError(
+          'Local area details are unavailable. Enable location access and configure your Geoapify API key.'
+        );
         setLoadingAi(false);
         return;
       }
 
       setLoadingAi(true);
+      setDetailsError(null);
       try {
-        const res = await fetchLocationAiSuggestions({
-          locationName: village,
-          fullAddress,
-          nearbyPlaces: nearbyPlaceContext,
-          radiusKm,
-          apiKey,
-        });
+        const details = await getPlaceHomepageDetails(reverseGeocodeResponse);
 
         if (isMounted) {
-          setAiData(res);
+          setHomepageDetails(details);
           setLoadingAi(false);
         }
       } catch (e) {
-        if (isMounted) setLoadingAi(false);
+        if (isMounted) {
+          console.error('Failed to fetch homepage details:', e);
+          setDetailsError('Could not load local area details at this time.');
+          setLoadingAi(false);
+        }
       }
     }
 
-    loadAi();
+    loadHomepageDetails();
 
     return () => {
       isMounted = false;
     };
-  }, [village, fullAddress, nearbyPlaceContext, nearbyPlaceContextKey, radiusKm, placesLoading, apiKey]);
+  }, [reverseGeocodeResponse, reverseGeocodeLoading]);
 
   return (
     <section className="relative rounded-3xl p-5 sm:p-7 bg-white/10 dark:bg-white/5 backdrop-blur-2xl border border-white/20 shadow-2xl overflow-hidden text-white transition-all">
@@ -165,19 +155,20 @@ export function ModernHeroBanner({
 
         {/* Current location introduction and nearby highlights */}
         <div className="apple-intelligence-glow p-4 rounded-2xl bg-slate-900/40 border border-white/15 backdrop-blur-xl relative overflow-hidden">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-0.5 shadow-sm">
-                <div className="w-full h-full bg-slate-950/80 rounded-[10px] flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-300 animate-pulse" />
-                </div>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-9 h-9 shrink-0 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-0.5 shadow-md shadow-purple-500/20">
+              <div className="w-full h-full bg-slate-950/80 rounded-[10px] flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-purple-300 animate-pulse" />
               </div>
-              <h3 className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5">
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
                 About {village}
-                <span className="text-[9px] uppercase font-semibold px-2 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Gemini 2.5 Flash
-                </span>
               </h3>
+              <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/15 text-purple-200 border border-purple-400/30 shadow-sm shadow-purple-500/10">
+                <Sparkles className="w-3 h-3 text-purple-300" />
+                AI Local Guide
+              </span>
             </div>
           </div>
 
@@ -188,24 +179,28 @@ export function ModernHeroBanner({
             </div>
           ) : (
             <div className="space-y-2.5">
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                {aiData?.insight || `Explore ${village} and its surroundings within ${radiusKm} km. Local highlights are being prepared from nearby places.`}
-              </p>
+              {detailsError ? (
+                <p className="text-xs sm:text-sm text-rose-300">{detailsError}</p>
+              ) : (
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                  {homepageDetails?.summary || `Explore ${village} and its surroundings within ${radiusKm} km. Local highlights are being prepared from nearby places.`}
+                </p>
+              )}
 
-              {/* Interactive AI Suggestion Tags */}
-              {aiData?.tags && aiData.tags.length > 0 && (
+              {/* Interactive local search suggestions */}
+              {homepageDetails?.lines?.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider mr-1">
                     Try searching:
                   </span>
-                  {aiData.tags.map((tag, idx) => (
+                  {homepageDetails.lines.map((tag, idx) => (
                     <button
-                      key={idx}
-                      onClick={() => onSelectSuggestionTag && onSelectSuggestionTag(tag)}
+                      key={`${tag}-${idx}`}
+                      onClick={() => onSelectSuggestionTag?.(String(tag))}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-medium text-white/90 border border-white/15 transition-all active:scale-95 cursor-pointer shadow-sm hover:border-purple-400/50"
                     >
                       <Tag className="w-2.5 h-2.5 text-purple-300" />
-                      <span>{tag}</span>
+                      <span>{String(tag)}</span>
                     </button>
                   ))}
                 </div>

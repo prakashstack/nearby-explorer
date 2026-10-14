@@ -47,6 +47,7 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
     formattedAddress: 'Barejadi, Daskroi, Ahmedabad District, Gujarat, 382435, India',
   });
   const [locating, setLocating] = useState(false);
+  const [reverseGeocodeLoading, setReverseGeocodeLoading] = useState(true);
   const [gpsError, setGpsError] = useState(null);
 
   // Search & Filter controls: Default 20 km radius!
@@ -58,6 +59,7 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
 
   // Places state
   const [places, setPlaces] = useState([]);
+  const [reverseGeocodeResponse, setReverseGeocodeResponse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDemoData, setIsDemoData] = useState(false);
   const [apiError, setApiError] = useState(null);
@@ -81,10 +83,12 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
   const requestGeolocation = () => {
     if (!navigator.geolocation) {
       setGpsError('Geolocation is not supported by your browser');
+      setReverseGeocodeLoading(false);
       return;
     }
 
     setLocating(true);
+    setReverseGeocodeLoading(true);
     setGpsError(null);
 
     navigator.geolocation.getCurrentPosition(
@@ -98,7 +102,7 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
         setLocating(false);
 
         // Reverse geocode to find exact village, pincode, full address
-        const detectedInfo = await reverseGeocode({
+        const { locationInfo: detectedInfo, thirdPartyApiResponse } = await reverseGeocode({
           lat: newCoords.lat,
           lon: newCoords.lon,
           apiKey: keys.geoapifyKey,
@@ -106,10 +110,13 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
 
         setLocationInfo(detectedInfo);
         setCityName(detectedInfo.displayName || 'Current Location');
+        setReverseGeocodeResponse(thirdPartyApiResponse);
+        setReverseGeocodeLoading(false);
       },
       (err) => {
         console.warn('Geolocation denied or timed out:', err);
         setLocating(false);
+        setReverseGeocodeLoading(false);
         setGpsError('GPS access denied. Using detected location.');
       },
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
@@ -132,7 +139,7 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
         radiusKm,
         apiKey: keys.geoapifyKey,
       });
-
+      setPlaces(res.places || []);
       setPlaces(res.places || []);
       setIsDemoData(Boolean(res.isDemo));
       if (res.error) setApiError(res.error);
@@ -240,8 +247,8 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
           locationInfo={locationInfo}
           coords={coords}
           radiusKm={radiusKm}
-          nearbyPlaces={places}
-          placesLoading={loading}
+          reverseGeocodeResponse={reverseGeocodeResponse}
+          reverseGeocodeLoading={reverseGeocodeLoading}
           onSelectSuggestionTag={(tag) => setSearchQuery(tag)}
           onRefreshGps={requestGeolocation}
           locating={locating}

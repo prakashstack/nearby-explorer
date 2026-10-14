@@ -618,15 +618,21 @@ export async function reverseGeocode({ lat, lon, apiKey }) {
     formattedAddress: 'Current Location',
   };
 
-  if (!apiKey || apiKey.trim().length === 0) return fallback;
+  if (!apiKey || apiKey.trim().length === 0) {
+    return { locationInfo: fallback, thirdPartyApiResponse: null };
+  }
 
   try {
     const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${apiKey.trim()}`;
     const res = await fetch(url);
-    if (!res.ok) return fallback;
+    if (!res.ok) {
+      throw new Error(`Geoapify reverse geocoding HTTP ${res.status}: ${res.statusText}`);
+    }
     const data = await res.json();
     const props = data.features?.[0]?.properties;
-    if (!props) return fallback;
+    if (!props) {
+      return { locationInfo: fallback, thirdPartyApiResponse: data };
+    }
 
     const village = props.village || props.suburb || props.hamlet || props.neighbourhood || '';
     const city = props.city || props.town || props.municipality || '';
@@ -641,17 +647,21 @@ export async function reverseGeocode({ lat, lon, apiKey }) {
     const displayName = village || city || district || 'Current Location';
 
     return {
-      displayName,
-      village: village || displayName,
-      city,
-      district,
-      state,
-      postcode,
-      country,
-      formattedAddress,
+      locationInfo: {
+        displayName,
+        village: village || displayName,
+        city,
+        district,
+        state,
+        postcode,
+        country,
+        formattedAddress,
+      },
+      thirdPartyApiResponse: data,
     };
   } catch (e) {
-    return fallback;
+    console.error('[Geoapify] Reverse geocoding failed:', e);
+    return { locationInfo: fallback, thirdPartyApiResponse: null };
   }
 }
 
