@@ -606,6 +606,20 @@ export async function fetchWalkingRoute({ fromLat, fromLon, toLat, toLon, apiKey
 /**
  * Reverse Geocoding to get neighborhood/village/city name, pincode, and full formatted address
  */
+export async function fetchReverseGeocodeResponse({ lat, lon, apiKey }) {
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new Error('Geoapify API key is required for reverse geocoding');
+  }
+
+  const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${apiKey.trim()}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Geoapify reverse geocoding HTTP ${res.status}: ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
 export async function reverseGeocode({ lat, lon, apiKey }) {
   const fallback = {
     displayName: 'Current Location',
@@ -623,12 +637,7 @@ export async function reverseGeocode({ lat, lon, apiKey }) {
   }
 
   try {
-    const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${apiKey.trim()}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Geoapify reverse geocoding HTTP ${res.status}: ${res.statusText}`);
-    }
-    const data = await res.json();
+    const data = await fetchReverseGeocodeResponse({ lat, lon, apiKey });
     const props = data.features?.[0]?.properties;
     if (!props) {
       return { locationInfo: fallback, thirdPartyApiResponse: data };

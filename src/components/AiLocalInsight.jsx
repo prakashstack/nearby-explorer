@@ -1,49 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, ShieldCheck } from 'lucide-react';
-import { fetchLocalInsight } from '../services/gemini';
-import { getGeminiKey } from '../services/apiKeys';
+import { Sparkles, RefreshCw } from 'lucide-react';
+import { getGeoapifyKey } from '../services/apiKeys';
+import { fetchReverseGeocodeResponse } from '../services/geoapify';
+import { getPlaceHomepageDetails } from '../services/homepageDetails';
 
 export function AiLocalInsight({ place }) {
-  const [insight, setInsight] = useState(null);
+  const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fromCache, setFromCache] = useState(false);
-  const [modelName, setModelName] = useState('Gemini 2.5 Flash');
   const [error, setError] = useState(null);
+  const [refreshRequest, setRefreshRequest] = useState(0);
 
-  const apiKey = getGeminiKey();
-
-  const loadInsight = async (forceRefresh = false) => {
-    if (!place?.id) return;
-
-    if (forceRefresh) {
-      localStorage.removeItem(`cache_gemini_guide_v3_${place.id}`);
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetchLocalInsight({
-        place,
-        apiKey,
-      });
-
-      setInsight(res.text);
-      setFromCache(res.fromCache);
-      if (res.model) {
-        setModelName(res.model.replace('(demo)', '').replace('(fallback)', '').trim());
-      }
-    } catch (err) {
-      console.error('Failed to fetch Gemini insight:', err);
-      setError('Could not generate insight at this time.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const apiKey = getGeoapifyKey();
 
   useEffect(() => {
-    loadInsight();
-  }, [place?.id, apiKey]);
+    let isMounted = true;
+
+    async function loadPlaceDetails() {
+      if (
+        !place?.id ||
+        place.lat == null ||
+        place.lon == null ||
+        !Number.isFinite(Number(place.lat)) ||
+        !Number.isFinite(Number(place.lon))
+      ) {
+        setDetails(null);
+        setError('Location coordinates are not available for this place.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const reverseGeocodeResponse = await fetchReverseGeocodeResponse({
+          lat: place.lat,
+          lon: place.lon,
+          apiKey,
+        });
+        const placeDetails = await getPlaceHomepageDetails(reverseGeocodeResponse);
+        if (isMounted) setDetails(placeDetails);
+      } catch (err) {
+        console.error('Failed to load place-specific local details:', err);
+        if (isMounted) setError('Could not load local details for this place at this time.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadPlaceDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [place?.id, place?.lat, place?.lon, apiKey, refreshRequest]);
 
   return (
     <div className="w-full relative apple-intelligence-glow p-5 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl bg-slate-900/40 border border-white/20">
@@ -65,27 +73,20 @@ export function AiLocalInsight({ place }) {
                 A Little Local Insight
               </h3>
               <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                {modelName}
+                Local Guide
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Apple Intelligence Insider Guide</p>
+            <p className="text-[11px] text-slate-400">Insights for {place?.name || 'this place'}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {fromCache && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <ShieldCheck className="w-3 h-3" />
-              Cached
-            </span>
-          )}
-
           <button
-            onClick={() => loadInsight(true)}
+            onClick={() => setRefreshRequest((request) => request + 1)}
             disabled={loading}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-            title="Regenerate insider tip"
-            aria-label="Regenerate insight"
+            title="Refresh local place details"
+            aria-label="Refresh local place details"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -105,11 +106,19 @@ export function AiLocalInsight({ place }) {
           <p className="text-xs text-rose-300">{error}</p>
         ) : (
           <div className="space-y-3 text-sm sm:text-base font-normal text-slate-100 leading-relaxed tracking-normal selection:bg-purple-500/40">
-            {(insight || '')
-              .split(/\n\s*\n/)
-              .map((paragraph) => paragraph.replace(/^\s*(?:[-*•]|\d+[.)])\s*/gm, '').trim())
-              .filter(Boolean)
-              .map((paragraph, index) => <p key={`${index}-${paragraph}`}>{paragraph}</p>)}
+            <p>{details?.summary}</p>
+            {details?.lines?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {details.lines.map((line, index) => (
+                  <span
+                    key={`${line}-${index}`}
+                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-medium text-white/90 border border-white/15"
+                  >
+                    {String(line)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
