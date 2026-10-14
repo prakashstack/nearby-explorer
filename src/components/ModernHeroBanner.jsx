@@ -5,7 +5,6 @@ import {
   LocateFixed,
   Compass,
   CheckCircle2,
-  Tag,
 } from 'lucide-react';
 import { getPlaceHomepageDetails } from '../services/homepageDetails';
 
@@ -15,7 +14,6 @@ export function ModernHeroBanner({
   radiusKm = 20,
   reverseGeocodeResponse,
   reverseGeocodeLoading = false,
-  onSelectSuggestionTag,
   onRefreshGps,
   locating = false,
 }) {
@@ -187,24 +185,6 @@ export function ModernHeroBanner({
                 </p>
               )}
 
-              {/* Interactive local search suggestions */}
-              {homepageDetails?.lines?.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider mr-1">
-                    Try searching:
-                  </span>
-                  {homepageDetails.lines.map((tag, idx) => (
-                    <button
-                      key={`${tag}-${idx}`}
-                      onClick={() => onSelectSuggestionTag?.(String(tag))}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-medium text-white/90 border border-white/15 transition-all active:scale-95 cursor-pointer shadow-sm hover:border-purple-400/50"
-                    >
-                      <Tag className="w-2.5 h-2.5 text-purple-300" />
-                      <span>{String(tag)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -249,7 +249,6 @@ export function HomePage({ favorites = [], onToggleFavorite, onUserCoordsChange 
           radiusKm={radiusKm}
           reverseGeocodeResponse={reverseGeocodeResponse}
           reverseGeocodeLoading={reverseGeocodeLoading}
-          onSelectSuggestionTag={(tag) => setSearchQuery(tag)}
           onRefreshGps={requestGeolocation}
           locating={locating}
         />

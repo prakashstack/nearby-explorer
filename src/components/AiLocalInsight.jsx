@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { getGeoapifyKey } from '../services/apiKeys';
 import { fetchReverseGeocodeResponse } from '../services/geoapify';
 import { getPlaceHomepageDetails } from '../services/homepageDetails';
@@ -8,7 +8,6 @@ export function AiLocalInsight({ place }) {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshRequest, setRefreshRequest] = useState(0);
 
   const apiKey = getGeoapifyKey();
 
@@ -51,7 +50,7 @@ export function AiLocalInsight({ place }) {
     return () => {
       isMounted = false;
     };
-  }, [place?.id, place?.lat, place?.lon, apiKey, refreshRequest]);
+  }, [place?.id, place?.lat, place?.lon, apiKey]);
 
   return (
     <div className="w-full relative apple-intelligence-glow p-5 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl bg-slate-900/40 border border-white/20">
@@ -61,35 +60,24 @@ export function AiLocalInsight({ place }) {
 
       {/* Card Header */}
       <div className="relative z-10 flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-0.5 shadow-md shadow-purple-500/20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-0.5 shadow-md shadow-purple-500/20">
             <div className="w-full h-full bg-slate-950/70 rounded-[14px] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-purple-300 animate-pulse" />
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                A Little Local Insight
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <h3 className="text-sm sm:text-base font-bold tracking-tight text-white">
+                AI Local Insights
               </h3>
-              <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                Local Guide
+              <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/15 text-purple-200 border border-purple-400/30 shadow-sm shadow-purple-500/10">
+                <Sparkles className="w-3 h-3 text-purple-300" />
+                AI Place Guide
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Insights for {place?.name || 'this place'}</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setRefreshRequest((request) => request + 1)}
-            disabled={loading}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-            title="Refresh local place details"
-            aria-label="Refresh local place details"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 
@@ -107,18 +95,6 @@ export function AiLocalInsight({ place }) {
         ) : (
           <div className="space-y-3 text-sm sm:text-base font-normal text-slate-100 leading-relaxed tracking-normal selection:bg-purple-500/40">
             <p>{details?.summary}</p>
-            {details?.lines?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {details.lines.map((line, index) => (
-                  <span
-                    key={`${line}-${index}`}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-medium text-white/90 border border-white/15"
-                  >
-                    {String(line)}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
